@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: JavaDreamerX <csmaster10102@gmail.com>
+Date: Sat, 14 Dec 2024 00:55:16 -0500
+Subject: [PATCH] World Protect Prism Addition
+
+
+diff --git a/src/main/java/net/minecraft/world/level/ServerExplosion.java b/src/main/java/net/minecraft/world/level/ServerExplosion.java
+index 685ccfb73bf7125585ef90b6a0f51b2f81daa428..71791c844ed3f15f0ae1b46ac420b459cbacba7f 100644
+--- a/src/main/java/net/minecraft/world/level/ServerExplosion.java
++++ b/src/main/java/net/minecraft/world/level/ServerExplosion.java
+@@ -44,7 +44,7 @@ import org.bukkit.Location;
+ import org.bukkit.event.block.BlockExplodeEvent;
+ // CraftBukkit end
+ 
+-public class ServerExplosion implements Explosion {
++public class ServerExplosion implements Explosion, WorldProtectionCheck {
+ 
+     private static final ExplosionDamageCalculator EXPLOSION_DAMAGE_CALCULATOR = new ExplosionDamageCalculator();
+     private static final int MAX_DROPS_PER_COMBINED_STACK = 16;
+@@ -583,7 +583,7 @@ public class ServerExplosion implements Explosion {
+         for (int i1 = positions.size() - 1; i1 >= 0; i1--) {
+             BlockPos cpos = positions.get(i1);
+             org.bukkit.block.Block bblock = bworld.getBlockAt(cpos.getX(), cpos.getY(), cpos.getZ());
+-            if (!bblock.getType().isAir()) {
++            if (!bblock.getType().isAir() && !isProtected(bblock)) {
+                 blockList.add(bblock);
+             }
+         }
+@@ -772,6 +772,11 @@ public class ServerExplosion implements Explosion {
+         return this.radius < 2.0F || !this.interactsWithBlocks();
+     }
+ 
++    @Override
++    public boolean isProtected(final org.bukkit.block.Block block) {
++        return false;
++    }
++
+     private static class StackCollector {
+ 
+         final BlockPos pos;
+diff --git a/src/main/java/net/minecraft/world/level/WorldProtectionCheck.java b/src/main/java/net/minecraft/world/level/WorldProtectionCheck.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..5599e13f29aa248a61036900968f782212d13b06
+--- /dev/null
++++ b/src/main/java/net/minecraft/world/level/WorldProtectionCheck.java
+@@ -0,0 +1,7 @@
++package net.minecraft.world.level;
++
++import org.bukkit.block.Block;
++
++public interface WorldProtectionCheck {
++    public boolean isProtected(Block block);
++}
