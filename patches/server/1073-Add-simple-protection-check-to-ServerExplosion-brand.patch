@@ -1,0 +1,87 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: JavaDreamerX <csmaster10102@gmail.com>
+Date: Sat, 14 Dec 2024 05:49:59 -0500
+Subject: [PATCH] Add simple protection check to ServerExplosion; branding
+
+
+diff --git a/src/main/java/com/mojang/serialization/Keyable.java b/src/main/java/com/mojang/serialization/Keyable.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..676c04bc42d4bd88f743e4e971166b7131bcb7e0
+--- /dev/null
++++ b/src/main/java/com/mojang/serialization/Keyable.java
+@@ -0,0 +1,17 @@
++package com.mojang.serialization;
++
++import java.util.function.Supplier;
++import java.util.stream.Stream;
++
++public interface Keyable {
++    <T> Stream<T> keys(DynamicOps<T> ops);
++
++    static Keyable forStrings(final Supplier<Stream<String>> keys) {
++        return new Keyable() {
++            @Override
++            public <T> Stream<T> keys(final DynamicOps<T> ops) {
++                return keys.get().map(ops::createString);
++            }
++        };
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 4158473fd553a16fec23bcbcf9a278d413120600..deda35243ffd2b432e2bb74f35bf36cbd03977ed 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2011,7 +2011,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+ 
+     @DontObfuscate
+     public String getServerModName() {
+-        return io.papermc.paper.ServerBuildInfo.buildInfo().brandName(); // Paper
++        return "Prism Paper"; // Paper
+     }
+ 
+     public SystemReport fillSystemReport(SystemReport details) {
+diff --git a/src/main/java/net/minecraft/world/level/ProtectionChecker.java b/src/main/java/net/minecraft/world/level/ProtectionChecker.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..d678c62366ad176afd7c5eee7e7d6865e05b9d9b
+--- /dev/null
++++ b/src/main/java/net/minecraft/world/level/ProtectionChecker.java
+@@ -0,0 +1,5 @@
++package net.minecraft.world.level;
++
++public interface ProtectionChecker {
++    public boolean isProtected(org.bukkit.block.Block block);
++}
+diff --git a/src/main/java/net/minecraft/world/level/ServerExplosion.java b/src/main/java/net/minecraft/world/level/ServerExplosion.java
+index bbbd451ff184be8fa13bd93d53c89a9502f9951a..15deb09672dbde28a9821610a881938f7bea60e1 100644
+--- a/src/main/java/net/minecraft/world/level/ServerExplosion.java
++++ b/src/main/java/net/minecraft/world/level/ServerExplosion.java
+@@ -44,7 +44,7 @@ import org.bukkit.Location;
+ import org.bukkit.event.block.BlockExplodeEvent;
+ // CraftBukkit end
+ 
+-public class ServerExplosion implements Explosion {
++public class ServerExplosion implements Explosion, ProtectionChecker {
+ 
+     private static final ExplosionDamageCalculator EXPLOSION_DAMAGE_CALCULATOR = new ExplosionDamageCalculator();
+     private static final int MAX_DROPS_PER_COMBINED_STACK = 16;
+@@ -583,7 +583,7 @@ public class ServerExplosion implements Explosion {
+         for (int i1 = positions.size() - 1; i1 >= 0; i1--) {
+             BlockPos cpos = positions.get(i1);
+             org.bukkit.block.Block bblock = bworld.getBlockAt(cpos.getX(), cpos.getY(), cpos.getZ());
+-            if (!bblock.getType().isAir()) {
++            if (!bblock.getType().isAir() && !isProtected(bblock)) {
+                 blockList.add(bblock);
+             }
+         }
+@@ -768,6 +768,11 @@ public class ServerExplosion implements Explosion {
+         return this.radius < 2.0F || !this.interactsWithBlocks();
+     }
+ 
++    @Override
++    public boolean isProtected(final org.bukkit.block.Block block) {
++        return false;
++    }
++
+     private static class StackCollector {
+ 
+         final BlockPos pos;
